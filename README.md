@@ -6,13 +6,10 @@
 
 ----------------------------------------
 ### x64
-![Docker Image Version](https://img.shields.io/docker/v/forumi0721/entware-base/x64)
 ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/forumi0721/entware-base/x64)
 ### aarch64
-![Docker Image Version](https://img.shields.io/docker/v/forumi0721/entware-base/aarch64)
 ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/forumi0721/entware-base/aarch64)
 ### armv7
-![Docker Image Version](https://img.shields.io/docker/v/forumi0721/entware-base/armv7)
 ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/forumi0721/entware-base/armv7)
 
 
