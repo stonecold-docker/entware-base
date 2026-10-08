@@ -21,6 +21,7 @@ if [ "${BUILD_ARCH}" = "x86_64" ]; then
 elif [ "${BUILD_ARCH}" = "aarch64" ]; then
 	ENTWARE_VER="$(wget http://bin.entware.net/ -q -O - | grep 'aarch64-' | tail -1 | sed -e 's/^.*a href="\([^"]*\)\/".*$/\1/g')"
 fi
+echo "Current version : ${ENTWARE_VER}"
 
 #busybox
 for folder in bin dev etc proc run sys opt/bin bbin
