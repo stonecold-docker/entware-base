@@ -31,7 +31,7 @@ done
 cp /bin/busybox.static ${TARGET_OUTPUT}/bbin/busybox.static
 cp /bin/busybox.static ${TARGET_OUTPUT}/opt/bin/busybox
 PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bbin/busybox.static --install -s /bbin
-ln -s /bbin/busybox.static ${TARGET_OUTPUT}/bin/sh
+ln -sf /bbin/busybox.static ${TARGET_OUTPUT}/bin/sh
 
 #resolve
 cat <<- EOF > ${TARGET_OUTPUT}/etc/resolv.conf
@@ -63,7 +63,7 @@ fi
 
 #workaround link
 mkdir -p ${TARGET_OUTPUT}/usr/bin
-ln -s /opt/bin/env ${TARGET_OUTPUT}/usr/bin/env
+ln -sf /opt/bin/env ${TARGET_OUTPUT}/usr/bin/env
 
 PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bin/sh -c "/opt/bin/opkg update ; /opt/bin/opkg download entware-opt"
 tar zxf ${TARGET_OUTPUT}/entware-opt* -C ${TARGET_OUTPUT}/
@@ -106,7 +106,7 @@ fi
 mkdir -p ${TARGET_OUTPUT}/opt/usr/lib/locale
 touch ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
 
-chroot "${TARGET_OUTPUT}" /bin/sh -c "/opt/bin/opkg install locales"
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bin/sh -c "/opt/bin/opkg install locales"
 rm -rf ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
 mkdir -p ${TARGET_OUTPUT}/locales
 wget http://pkg.entware.net/sources/i18n_glib227.tar.gz -q -O - | tar zxf - -C ${TARGET_OUTPUT}/locales/
