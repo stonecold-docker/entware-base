@@ -4,38 +4,140 @@ set -e
 
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing packages"
 PKG_LIB=""
-PKG_DEV="bash git grep"
+PKG_DEV="busybox-static tzdata"
 docker-install -r -u ${PKG_LIB} ${PKG_DEV}
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
 
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Downloading bootstrap"
-mkdir -p /build
-cd /build
-wget --no-check-certificate -q https://bitbucket.org/forumi0721/docker-dist-files/raw/master/imagex.sh
-chmod +x imagex.sh
-git clone https://forumi0721@bitbucket.org/forumi0721/docker-dist-extras.git extras --depth=1
-if [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "aarch64" ]; then
-	cp extras/qemu-aarch64-static /usr/bin
-	chmod +x /usr/bin/qemu-aarch64-static
-elif [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "armv7" ]; then
-	cp extras/qemu-arm-static /usr/bin
-	chmod +x /usr/bin/qemu-arm-static
-fi
-cd /
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
-echo
-
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
-cd /build
-./imagex.sh -d entware -a ${BUILD_TAG:-x64} -q
-cd /
+#config
+TARGET_OUTPUT=/output
+TARGET_TIMEZONE="Asia/Seoul"
+BUILD_ARCH=$(uname -m)
+
+ENTWARE_VER=
+if [ "${BUILD_ARCH}" = "x86_64" ]; then
+	ENTWARE_VER="$(wget http://bin.entware.net/ -q -O - | grep "x64-" | tail -1 | sed -e 's/^.*a href="\([^"]*\)\/".*$/\1/g')"
+elif [ "${BUILD_ARCH}" = "aarch64" ]; then
+	ENTWARE_VER="$(wget http://bin.entware.net/ -q -O - | grep 'aarch64-' | tail -1 | sed -e 's/^.*a href="\([^"]*\)\/".*$/\1/g')"
+fi
+
+#busybox
+for folder in bin dev etc proc run sys opt/bin bbin
+do
+	mkdir -p ${TARGET_OUTPUT}/${folder}
+done
+cp /bin/busybox.static ${TARGET_OUTPUT}/bbin/busybox.static
+cp /bin/busybox.static ${TARGET_OUTPUT}/opt/bin/busybox
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bbin/busybox.static --install -s /bbin
+ln -s /bbin/busybox.static ${TARGET_OUTPUT}/bin/sh
+
+#resolve
+cat <<- EOF > ${TARGET_OUTPUT}/etc/resolv.conf
+nameserver 1.1.1.1
+nameserver 1.0.0.1
+EOF
+
+#Intall entware
+wget http://bin.entware.net/${ENTWARE_VER}/installer/generic.sh -q -O ${TARGET_OUTPUT}/entware_install.sh
+sed -i -e 's|/opt/bin/opkg install entware-opt|#/opt/bin/opkg install entware-opt|g' ${TARGET_OUTPUT}/entware_install.sh
+sed -i -e 's|chmod 777 /opt/tmp|chmod 777 /opt/tmp\nexit 0|g' ${TARGET_OUTPUT}/entware_install.sh
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bin/sh -c "/bin/sh /entware_install.sh ; /opt/bin/opkg update ; /opt/bin/opkg install opkg busybox entware-release"
+rm -rf ${TARGET_OUTPUT}/entware_install.sh
+
+#ln
+for x in bin sbin lib var tmp root home usr
+do
+	if [ ! -e ${TARGET_OUTPUT}/opt/${x} ]; then
+		mkdir -p ${TARGET_OUTPUT}/opt/${x}
+	fi
+	rm -rf ${TARGET_OUTPUT}/${x}
+	ln -sf opt/${x} ${TARGET_OUTPUT}/${x}
+done
+chmod 1777 ${TARGET_OUTPUT}/opt/tmp
+if [ "${TARGET_ARCH}" = "x64" ]; then
+	rm -rf ${TARGET_OUTPUT}/lib64
+	ln -sf opt/lib ${TARGET_OUTPUT}/lib64
+fi
+
+#workaround link
+mkdir -p ${TARGET_OUTPUT}/usr/bin
+ln -s /opt/bin/env ${TARGET_OUTPUT}/usr/bin/env
+
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bin/sh -c "/opt/bin/opkg update ; /opt/bin/opkg download entware-opt"
+tar zxf ${TARGET_OUTPUT}/entware-opt* -C ${TARGET_OUTPUT}/
+tar zxf ${TARGET_OUTPUT}/data.tar.gz -C ${TARGET_OUTPUT}/
+rm -rf ${TARGET_OUTPUT}/entware-opt* ${TARGET_OUTPUT}/debian-binary ${TARGET_OUTPUT}/data.* ${TARGET_OUTPUT}/control.*
+
+#etc
+mkdir -p ${TARGET_OUTPUT}/usr/bin ${TARGET_OUTPUT}/usr/sbin ${TARGET_OUTPUT}/usr/local/bin ${TARGET_OUTPUT}/usr/local/sbin
+mv ${TARGET_OUTPUT}/opt/etc/shells.1 ${TARGET_OUTPUT}/opt/etc/shells
+rm -rf ${TARGET_OUTPUT}/opt/etc/*.1
+cat <<- EOF > ${TARGET_OUTPUT}/opt/etc/passwd
+root:x:0:0:Root:/root:/opt/bin/sh
+nobody:x:65534:65534:nobody:/:/sbin/nologin
+EOF
+cat <<- EOF > ${TARGET_OUTPUT}/opt/etc/group
+root:x:0:root
+users:x:100:
+nobody:x:65534:
+EOF
+sed -i -e 's/^export LANG=/#export LANG=/g' -e 's/^export LC_ALL=/#export LC_ALL=/g' ${TARGET_OUTPUT}/opt/etc/profile
+echo >> ${TARGET_OUTPUT}/opt/etc/profile
+echo "export LD_LIBRARY_PATH=/opt/lib" >> ${TARGET_OUTPUT}/opt/etc/profile
+echo "export PATH=/usr/local/sbin:/usr/local/bin:\${PATH}" >> ${TARGET_OUTPUT}/opt/etc/profile
+
+#resolve
+cat <<- EOF > ${TARGET_OUTPUT}/etc/resolv.conf
+nameserver 1.1.1.1
+nameserver 1.0.0.1
+EOF
+
+#skel
+cp -ar ${TARGET_OUTPUT}/opt/etc/skel/. ${TARGET_OUTPUT}/root/
+
+#timezone
+if [ -e ${TARGET_OUTPUT}/opt/share/zoneinfo/${TARGET_TIMEZONE} ]; then
+	echo "${TARGET_TIMEZONE}" > ${TARGET_OUTPUT}/etc/timezone
+	rm -rf ${TARGET_OUTPUT}/etc/localtime
+	ln -sf /opt/share/zoneinfo/${TARGET_TIMEZONE} ${TARGET_OUTPUT}/opt/etc/localtime
+elif [ -e /usr/share/zoneinfo/${TARGET_TIMEZONE} ]; then
+	echo "${TARGET_TIMEZONE}" > ${TARGET_OUTPUT}/etc/timezone
+	rm -rf ${TARGET_OUTPUT}/etc/localtime
+	cp /usr/share/zoneinfo/${TARGET_TIMEZONE} ${TARGET_OUTPUT}/etc/localtime
+fi
+
+#Locales
+mkdir --p ${TARGET_OUTPUT}/opt/usr/lib/locale
+touch ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
+
+chroot "${TARGET_OUTPUT}" /bin/sh -c "/opt/bin/opkg install locales"
+rm -rf ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
+mkdir -p ${TARGET_OUTPUT}/locales
+wget http://pkg.entware.net/sources/i18n_glib227.tar.gz -q -O - | tar zxf - -C ${TARGET_OUTPUT}/locales/
+cp ${TARGET_OUTPUT}/locales/i18n/locales/translit_hangul ${TARGET_OUTPUT}/opt/usr/share/i18n/locales/translit_hangul
+cp ${TARGET_OUTPUT}/locales/i18n/locales/ko_KR ${TARGET_OUTPUT}/opt/usr/share/i18n/locales/ko_KR
+cp ${TARGET_OUTPUT}/locales/i18n/charmaps/EUC-KR.gz ${TARGET_OUTPUT}/opt/usr/share/i18n/charmaps/EUC-KR.gz
+gzip -dc ${TARGET_OUTPUT}/locales/i18n/charmaps/EUC-KR.gz > ${TARGET_OUTPUT}/opt/usr/share/i18n/charmaps/EUC-KR
+cp ${TARGET_OUTPUT}/locales/i18n/charmaps/KSC5636.gz ${TARGET_OUTPUT}/opt/usr/share/i18n/charmaps/KSC5636.gz
+gzip -dc ${TARGET_OUTPUT}/locales/i18n/charmaps/KSC5636.gz > ${TARGET_OUTPUT}/opt/usr/share/i18n/charmaps/KSC5636
+cp ${TARGET_OUTPUT}/locales/i18n/charmaps/CP949.gz ${TARGET_OUTPUT}/opt/usr/share/i18n/charmaps/CP949.gz
+gzip -dc ${TARGET_OUTPUT}/locales/i18n/charmaps/CP949.gz > ${TARGET_OUTPUT}/opt/usr/share/i18n/charmaps/CP949
+rm -rf ${TARGET_OUTPUT}/locales
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /opt/bin/localedef.new -c -f UTF-8 -i en_US en_US.UTF-8
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /opt/bin/localedef.new -c -f UTF-8 -i ko_KR ko_KR.UTF-8
+
+for x in entware_release passwd group localtime passwd profile shells
+do
+	if [ -e ${TARGET_OUTPUT}/opt/etc/${x} ]; then
+		ln -sf /opt/etc/${x} /${TARGET_OUTPUT}/etc/
+	fi
+done
+ln -sf /etc/resolv.conf ${TARGET_OUTPUT}/opt/etc/resolv.conf
+
+rm -rf ${TARGET_OUTPUT}/bbin
+chmod 1777 ${TARGET_OUTPUT}/opt/tmp
+
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
-
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Moving output"
-cd /
-mv /build/dist/dist-* /output
-rm -rf /build
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 
