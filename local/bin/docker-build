@@ -56,7 +56,7 @@ do
 	ln -sf opt/${x} ${TARGET_OUTPUT}/${x}
 done
 chmod 1777 ${TARGET_OUTPUT}/opt/tmp
-if [ "${TARGET_ARCH}" = "x64" ]; then
+if [ "${BUILD_ARCH}" = "x86_64" ]; then
 	rm -rf ${TARGET_OUTPUT}/lib64
 	ln -sf opt/lib ${TARGET_OUTPUT}/lib64
 fi
@@ -103,7 +103,7 @@ elif [ -e /usr/share/zoneinfo/${TARGET_TIMEZONE} ]; then
 fi
 
 #locale
-mkdir --p ${TARGET_OUTPUT}/opt/usr/lib/locale
+mkdir -p ${TARGET_OUTPUT}/opt/usr/lib/locale
 touch ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
 
 chroot "${TARGET_OUTPUT}" /bin/sh -c "/opt/bin/opkg install locales"
@@ -122,10 +122,10 @@ rm -rf ${TARGET_OUTPUT}/locales
 PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /opt/bin/localedef.new -c -f UTF-8 -i en_US en_US.UTF-8
 PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /opt/bin/localedef.new -c -f UTF-8 -i ko_KR ko_KR.UTF-8
 
-for x in entware_release passwd group localtime passwd profile shells
+for x in entware_release passwd group localtime profile shells
 do
 	if [ -e ${TARGET_OUTPUT}/opt/etc/${x} ]; then
-		ln -sf /opt/etc/${x} /${TARGET_OUTPUT}/etc/
+		ln -sf /opt/etc/${x} ${TARGET_OUTPUT}/etc/
 	fi
 done
 ln -sf /etc/resolv.conf ${TARGET_OUTPUT}/opt/etc/resolv.conf
