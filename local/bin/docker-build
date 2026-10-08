@@ -2,7 +2,7 @@
 
 set -e
 
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing packages"
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing required packages"
 PKG_LIB=""
 PKG_DEV="busybox-static tzdata"
 docker-install -r -u ${PKG_LIB} ${PKG_DEV}
@@ -38,7 +38,7 @@ nameserver 1.1.1.1
 nameserver 1.0.0.1
 EOF
 
-#Intall entware
+#Install entware
 wget http://bin.entware.net/${ENTWARE_VER}/installer/generic.sh -q -O ${TARGET_OUTPUT}/entware_install.sh
 sed -i -e 's|/opt/bin/opkg install entware-opt|#/opt/bin/opkg install entware-opt|g' ${TARGET_OUTPUT}/entware_install.sh
 sed -i -e 's|chmod 777 /opt/tmp|chmod 777 /opt/tmp\nexit 0|g' ${TARGET_OUTPUT}/entware_install.sh
@@ -86,12 +86,6 @@ sed -i -e 's/^export LANG=/#export LANG=/g' -e 's/^export LC_ALL=/#export LC_ALL
 echo >> ${TARGET_OUTPUT}/opt/etc/profile
 echo "export LD_LIBRARY_PATH=/opt/lib" >> ${TARGET_OUTPUT}/opt/etc/profile
 echo "export PATH=/usr/local/sbin:/usr/local/bin:\${PATH}" >> ${TARGET_OUTPUT}/opt/etc/profile
-
-#resolve
-cat <<- EOF > ${TARGET_OUTPUT}/etc/resolv.conf
-nameserver 1.1.1.1
-nameserver 1.0.0.1
-EOF
 
 #skel
 cp -ar ${TARGET_OUTPUT}/opt/etc/skel/. ${TARGET_OUTPUT}/root/
