@@ -101,7 +101,7 @@ elif [ -e /usr/share/zoneinfo/${TARGET_TIMEZONE} ]; then
 	cp /usr/share/zoneinfo/${TARGET_TIMEZONE} ${TARGET_OUTPUT}/etc/localtime
 fi
 
-#Locales
+#locale
 mkdir --p ${TARGET_OUTPUT}/opt/usr/lib/locale
 touch ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
 
