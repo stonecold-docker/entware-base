@@ -145,6 +145,13 @@ jobs:
           path=hooks/gh_pre_push
           if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
+      - name: Check cache configuration
+        env:
+          BUILD_NO_CACHE: ${{ vars.BUILD_NO_CACHE }}
+        run: |
+          echo "BUILD_NO_CACHE=[$BUILD_NO_CACHE]"
+          echo "no-cache=${{ vars.BUILD_NO_CACHE == 'true' }}"
+
       # Build each architecture by digest without creating temporary tags.
       # PRs build without pushing images.
       - name: Build and push architecture image
