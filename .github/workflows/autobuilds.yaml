@@ -16,6 +16,14 @@ on:
     types:
       - base-updated
 
+  # Allow manually triggering the workflow
+  workflow_dispatch:
+
+  # Rebuild the image every Thursday at 2 AM KST
+  schedule:
+    - cron: "0 2 * * 4"
+      timezone: "Asia/Seoul"
+
 env:
   # Define the context path and Dockerfile path.
 
