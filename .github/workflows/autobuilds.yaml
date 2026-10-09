@@ -145,12 +145,19 @@ jobs:
           path=hooks/gh_pre_push
           if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
-      - name: Check cache configuration
+      # Display all available GitHub Actions variables for troubleshooting.
+      # Secrets are excluded; environment variables are shown separately.
+      - name: Check build configuration
         env:
-          BUILD_NO_CACHE: ${{ vars.BUILD_NO_CACHE }}
+          BUILD_VARS: ${{ toJSON(vars) }}
         run: |
-          echo "BUILD_NO_CACHE=[$BUILD_NO_CACHE]"
-          echo "no-cache=${{ vars.BUILD_NO_CACHE == 'true' }}"
+          echo "=== GitHub Actions Variables ==="
+          echo "$BUILD_VARS" | jq .
+
+          echo "=== Workflow Environment Variables ==="
+          echo "DOCKER_AUTOBUILDS_CONTEXT_PATH=$DOCKER_AUTOBUILDS_CONTEXT_PATH"
+          echo "DOCKER_AUTOBUILDS_DOCKERFILE_PATH=$DOCKER_AUTOBUILDS_DOCKERFILE_PATH"
+          echo "DOCKER_REPOSITORY_NAME=$DOCKER_REPOSITORY_NAME"
 
       # Build each architecture by digest without creating temporary tags.
       # PRs build without pushing images.
