@@ -157,8 +157,10 @@ jobs:
           outputs: type=image,name=${{ env.DOCKER_REPOSITORY_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
           provenance: false
           sbom: false
-          cache-from: type=gha,scope=${{ matrix.tag }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.tag }}
+          cache-from: ${{ vars.BUILD_NO_CACHE == 'true' && '' || format('type=gha,scope={0}', matrix.tag) }}
+          cache-to: ${{ vars.BUILD_NO_CACHE == 'true' && '' || format('type=gha,mode=max,scope={0}', matrix.tag) }}
+          no-cache: ${{ vars.BUILD_NO_CACHE == 'true' }}
+          pull: true
 
       # Save the digest for the manifest job.
       - name: Export digest
