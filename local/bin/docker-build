@@ -30,6 +30,22 @@ do
 done
 cp /bin/busybox.static ${TARGET_OUTPUT}/bbin/busybox.static
 cp /bin/busybox.static ${TARGET_OUTPUT}/opt/bin/busybox
+#debug
+echo "=== Architecture ==="
+uname -m
+
+echo "=== BusyBox file ==="
+ls -l /bin/busybox.static "${TARGET_OUTPUT}/bbin/busybox.static"
+
+echo "=== Direct execution ==="
+"${TARGET_OUTPUT}/bbin/busybox.static" echo "Direct OK"
+
+echo "=== binfmt_misc ==="
+cat /proc/sys/fs/binfmt_misc/qemu-aarch64 2>/dev/null || true
+
+echo "=== chroot execution ==="
+chroot "${TARGET_OUTPUT}" /bbin/busybox.static echo "Chroot OK"
+
 PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bbin/busybox.static --install -s /bbin
 ln -sf /bbin/busybox.static ${TARGET_OUTPUT}/bin/sh
 
