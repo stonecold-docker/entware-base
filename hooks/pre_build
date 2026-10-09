@@ -1,4 +1,6 @@
 #!/bin/bash
 
-docker run --privileged -t --rm forumi0721/multiarch-qemu:latest register
+if [ "$DOCKER_TAG" = "arm64" ]; then
+	docker run --rm --privileged multiarch/qemu-user-static:register
+fi
 
