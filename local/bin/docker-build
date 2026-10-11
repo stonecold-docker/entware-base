@@ -125,7 +125,7 @@ touch ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
 PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/bbin chroot "${TARGET_OUTPUT}" /bin/sh -c "/opt/bin/opkg install locales"
 rm -rf ${TARGET_OUTPUT}/opt/usr/lib/locale/locale-archive
 mkdir -p ${TARGET_OUTPUT}/locales
-wget http://pkg.entware.net/sources/i18n_glib227.tar.gz -q -O - | tar zxf - -C ${TARGET_OUTPUT}/locales/
+wget http://bin.entware.net/other/i18n_glib231.tar.gz -q -O - | tar zxf - -C ${TARGET_OUTPUT}/locales/
 cp ${TARGET_OUTPUT}/locales/i18n/locales/translit_hangul ${TARGET_OUTPUT}/opt/usr/share/i18n/locales/translit_hangul
 cp ${TARGET_OUTPUT}/locales/i18n/locales/ko_KR ${TARGET_OUTPUT}/opt/usr/share/i18n/locales/ko_KR
 cp ${TARGET_OUTPUT}/locales/i18n/charmaps/EUC-KR.gz ${TARGET_OUTPUT}/opt/usr/share/i18n/charmaps/EUC-KR.gz
